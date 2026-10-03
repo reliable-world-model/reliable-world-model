@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>REVAMP: Reliability-Aware Dynamics-Value World Models for VLA Policy Improvement</title>
-  <meta name="description" content="REVAMP: a unified action-and-contact-conditioned world model with a two-signal reliability mechanism for improving VLA policies beyond supervised fine-tuning.">
+  <title>Reliability-Aware World Model for Robot Policy Improvement</title>
+  <meta name="description" content="A world model whose own reliability score weights imagined policy updates and selects where real robot data is collected.">
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -16,20 +16,19 @@
   <style>
     body { font-family: 'Noto Sans', sans-serif; }
     .publication-title { font-family: 'Google Sans', sans-serif; }
-    .figure-img { max-width: 100%; height: auto; border-radius: 8px; box-shadow: 0 2px 12px rgba(0,0,0,0.12); }
-    .overview-img { display: block; width: 100%; height: auto; border-radius: 8px; }
-    .pdf-figure { display: block; width: 100%; border: none; border-radius: 8px; box-shadow: 0 2px 12px rgba(0,0,0,0.12); }
+    .figure-img { display: block; width: 100%; height: auto; border-radius: 8px; box-shadow: 0 2px 12px rgba(0,0,0,0.12); }
     .demo-video, .single-video { width: 100%; border-radius: 8px; box-shadow: 0 2px 12px rgba(0,0,0,0.15); background: #000; }
     .qvideo { width: 100%; border-radius: 6px; background: #000; }
     .link-button { margin: 0.35rem; }
     .video-tabs .button { margin: 0.2rem; }
     .video-tabs .button.is-active { background: #1565C0; color: #fff; border-color: #1565C0; }
     .results-table td, .results-table th { vertical-align: middle; }
-    .mean-row { background: #f5f5f5; }
     .section { padding-top: 2.5rem; padding-bottom: 2.5rem; }
     .tag-suc { color: #257942; }
     .tag-fail { color: #cc0f35; }
     .content ul { display: inline-block; text-align: left; }
+    .figure-note { margin-top: 0.9rem; }
+    .table-container { overflow-x: auto; }
   </style>
 </head>
 <body>
@@ -41,17 +40,20 @@
       <div class="columns is-centered">
         <div class="column has-text-centered">
           <h1 class="title is-2 publication-title">
-            <b>REVAMP</b>: Reliability-Aware Dynamics-Value World Models<br>
-            for VLA Policy Improvement
+            Reliability-Aware World Model<br>
+            for Robot Policy Improvement
           </h1>
           <div class="is-size-4 publication-authors" style="margin-top:1rem;">
-            <span class="author-block">Anonymous Author(s)</span>
+            <span class="author-block">Anonymous authors</span>
           </div>
           <div class="is-size-6 has-text-grey" style="margin-top:0.5rem;">
-            Submitted to the 10th Conference on Robot Learning (CoRL 2026)
+            Under review as a conference paper at ICLR 2027
           </div>
           <div class="buttons is-centered" style="margin-top:1.25rem;">
-            <a href="https://github.com/revampcorl/revamp_codebase" class="button is-dark is-rounded link-button">
+            <a href="./static/files/paper.pdf" class="button is-link is-rounded link-button">
+              <span class="icon"><i class="fas fa-file-pdf"></i></span><span>Paper</span>
+            </a>
+            <a href="https://github.com/reliable-world-model/revamp_codebase" class="button is-dark is-rounded link-button">
               <span class="icon"><i class="fab fa-github"></i></span><span>Code</span>
             </a>
           </div>
@@ -81,25 +83,22 @@
         <h2 class="title is-2">Abstract</h2>
         <div class="content has-text-justified">
           <p>
-            Improving vision-language-action (VLA) policies beyond supervised fine-tuning (SFT) is a
-            central bottleneck for scalable robot manipulation. Because real-robot improvement is hard to
-            scale, recent work performs most of it inside a learned video world model. But existing
-            world-model methods face a dilemma: they either re-weight the trajectories the demonstrations
-            already contain&mdash;and so cannot teach new behaviors&mdash;or they explore beyond the
-            demonstration support into regions where the world model is unreliable, a gap co-training cannot
-            close because the policy only ever follows the model's own distribution and never visits its
-            hallucination regions. We propose <b>REVAMP</b>, a unified action-and-contact-conditioned world
-            model whose single DiT backbone produces both future-observation predictions and
-            action-conditioned Q-values. This shared encoder is the crux of our approach: it makes the model
-            compatible with flow-matching VLA policies via Adjoint Matching, and it supports a two-signal
-            reliability mechanism that pairs flow-matching self-consistency (<b>geometric faithfulness</b>)
-            with probe-and-inverse-dynamics verification (<b>action faithfulness</b>). These signals close a
-            self-improving loop: unreliable states trigger targeted real-environment rollouts that correct
-            the world model precisely where it was wrong, so the next round of imagined improvement can
-            explore further without entering a hallucination region. Across three RoboCasa simulation tasks
-            and three real-robot tasks, <b>REVAMP</b> improves the pretrained policy by <b>15 to 17</b>
-            success-rate points in simulation and <b>25 to 28</b> on the real robot, outperforming both DSRL
-            and a VLAW-style baseline on every task under an equal real-interaction budget.
+            Robot policies can improve by practicing inside a learned world model, but the model is wrong
+            in places, and practicing there teaches the policy behaviors that fail on the real robot. Fixing
+            the model needs new real data, and the usual way to get it is to run the policy on the robot and
+            refit; most of those rollouts, however, land on interactions the model already predicts well,
+            and few reach the places where it is wrong. We present a method in which the world model's own
+            prediction says how far it can be trusted. A reliability score, computed from the self-consistency
+            of the flow model's velocity field and from whether the predicted motion follows the commanded
+            action, is used twice: it weights each imagined policy update, and it selects the interactions at
+            which real data is collected. The world model is a video transformer with a dynamics head and an
+            action- and contact-conditioned value head on a shared backbone, and its action-value gradients
+            drive policy improvement. A flagged interaction is reached on the robot by restoring the logged
+            start and replaying the action prefix; the real outcome refits the model before the next round.
+            On three simulation and three real-robot tasks, two rounds of 20 real rollouts improve success
+            over the initial policy by 15.8&ndash;17.1 and 25.0&ndash;28.1 points and are ahead of DSRL and a VLAW
+            reproduction on every task at the same rollout budget. Controlled studies show that both uses of
+            the score contribute, and that the collected data corrects the model where it was flagged.
           </p>
         </div>
       </div>
@@ -108,37 +107,48 @@
 </section>
 
 <!-- Method -->
-<section class="section">
+<section class="section" style="padding-top:0;">
   <div class="container is-max-desktop">
     <div class="columns is-centered has-text-centered">
       <div class="column is-full-width">
         <h2 class="title is-2">Method Overview</h2>
-        <object class="pdf-figure" style="aspect-ratio:2032/1024;" data="./static/images/method.pdf#toolbar=0&navpanes=0&scrollbar=0" type="application/pdf">
-          <a href="./static/images/method.pdf">View the architecture figure (PDF)</a>
-        </object>
-        <div class="content has-text-centered" style="margin-top:1.25rem;">
-          <p>REVAMP has three parts:</p>
-          <ul>
-            <li>
-              <b>Unified world model.</b> A single Wan2.2-based DiT backbone, conditioned on the action
-              chunk and a contact signal, with two heads sharing one encoder: a <b>dynamics head</b> that
-              predicts future multi-view frames and a <b>Q-head</b> that predicts action-and-contact-conditioned
-              Q-values. The shared encoder lets the Q-head capture subtle contact effects such as failed
-              grasps where the visual change is minimal.
-            </li>
-            <li>
-              <b>Reliability-aware mechanism.</b> Every prediction is scored by two signals: an intrinsic
-              velocity-field self-consistency residual (<b>geometric faithfulness</b>) and an external
-              visual-probe-plus-inverse-dynamics check that recovers the implied action chunk
-              (<b>action faithfulness</b>).
-            </li>
-            <li>
-              <b>Closed-loop improvement.</b> A frequent imagination loop fine-tunes the policy with
-              reliability-gated Adjoint Matching (QAM), while a sparse real-interaction loop triggers
-              targeted real rollouts at flagged states and refits the world model exactly where it was
-              unreliable.
-            </li>
-          </ul>
+        <img class="figure-img" src="./static/images/teaser.png" alt="Two connected learning cycles: the reliability score weights policy updates in the imagination cycle and selects real feedback in the real-interaction cycle.">
+        <div class="content has-text-justified figure-note">
+          <p>
+            Two connected learning cycles. We score the reliability of every imagined prediction with two
+            signals from the world model itself: the self-consistency of its velocity field, and whether the
+            motion visible in the predicted frames follows the commanded action. The score both weights policy
+            updates and chooses where real feedback is collected: it down-weights unreliable updates, and
+            above a threshold it stops the imagined rollout and records the preceding interaction as a
+            collection candidate. For selected candidates the robot restores the logged initial scene, replays
+            the saved action prefix, and collects from the state actually reached; the new outcomes and the
+            historical data update the dynamics and value estimates for the next round.
+          </p>
+        </div>
+
+        <h3 class="title is-4" style="margin-top:2rem;">World model</h3>
+        <img class="figure-img" src="./static/images/method.png" alt="Architecture: a shared video transformer with a dynamics head, an action- and contact-conditioned Q-head, and the reliability-aware mechanism." style="max-width:900px; margin:0 auto;">
+        <div class="content has-text-justified figure-note">
+          <p>
+            The world model is a shared video transformer with a dynamics head and an action- and
+            contact-conditioned Q-head. It predicts future observations and action values, and Q-learning
+            with adjoint matching (QAM) uses the action-value gradients to improve the policy. The
+            reliability-aware mechanism scores each prediction with the two signals: velocity-field
+            self-consistency (geometric faithfulness) and behavioral verification of the commanded action
+            (action faithfulness).
+          </p>
+        </div>
+
+        <h3 class="title is-4" style="margin-top:2rem;">Reaching a flagged interaction on the robot</h3>
+        <img class="figure-img" src="./static/images/reset_replay.png" alt="The imagined cycle stops at a flagged prediction and issues a collection request; the real cycle restores the logged start, replays the action prefix, executes the flagged chunk, and refits the model on the real outcome.">
+        <div class="content has-text-justified figure-note">
+          <p>
+            A trigger is an imagined state. To obtain its real outcome, the robot reconstructs the history of
+            the imagined rollout: it restores the logged start, replays the same action prefix, and executes
+            the same flagged chunk, so that the real outcome answers the action the model was flagged on. The
+            recorded trajectory joins the training set, and the world model and Q-head are refit before the
+            next imagined cycle.
+          </p>
         </div>
       </div>
     </div>
@@ -151,27 +161,24 @@
     <div class="columns is-centered has-text-centered">
       <div class="column is-full-width">
         <h2 class="title is-2">Tasks</h2>
-        <div class="content has-text-centered">
-          <p>
-            We evaluate REVAMP on three <b>RoboCasa simulation</b> tasks and three <b>real-robot</b> tasks,
-            spanning articulated-object manipulation, contact-rich interaction, and long-horizon
-            pick-and-place.
-          </p>
+        <img class="figure-img" src="./static/images/tasks.png" alt="The six tasks: three RoboCasa simulation tasks and three real-robot tasks.">
+        <div class="content has-text-centered figure-note">
+          <p>Three RoboCasa simulation tasks and three physical tasks on two robot platforms, each starting from 150 logged trajectories.</p>
           <div class="columns">
             <div class="column">
               <h3 class="title is-5">Simulation (RoboCasa)</h3>
               <ul>
-                <li><b>TurnOnSinkFaucet</b> &mdash; articulated-object manipulation</li>
-                <li><b>OpenCabinet</b> &mdash; articulated-object manipulation</li>
-                <li><b>PickPlaceCounterToStove</b> &mdash; long-horizon pick-and-place</li>
+                <li><b>SinkFaucet</b> &mdash; turn the sink faucet to a target angle</li>
+                <li><b>OpenCabinet</b> &mdash; open the cabinet</li>
+                <li><b>PickPlace</b> &mdash; move an object from counter to stove</li>
               </ul>
             </div>
             <div class="column">
               <h3 class="title is-5">Real robot</h3>
               <ul>
-                <li><b>Open Jar</b> &mdash; rotate and detach the lid</li>
-                <li><b>Stack Box</b> &mdash; place the object and reach a stable stack</li>
-                <li><b>Fold Cloth</b> &mdash; fold the cloth into a compact square</li>
+                <li><b>OpenJar</b> &mdash; rotate and detach the jar lid</li>
+                <li><b>StackBox</b> &mdash; place two bagged items in the box and close it</li>
+                <li><b>FoldCloth</b> &mdash; fold a spread-out garment into a neat block</li>
               </ul>
             </div>
           </div>
@@ -187,32 +194,48 @@
     <div class="columns is-centered has-text-centered">
       <div class="column is-full-width">
         <h2 class="title is-2">Results</h2>
-        <div class="content has-text-centered">
+        <div class="content has-text-justified">
           <p>
-            Imagined improvement alone already lifts the pretrained &pi;<sub>0</sub> policy on every task
-            with no new interaction. Two rounds of targeted online correction further raise the simulation
-            gains, and REVAMP outperforms both DSRL and a VLAW-style baseline on every task under an equal
-            real-interaction budget.
+            Imagined improvement alone raises success over &pi;<sub>0</sub> without new interaction, and each
+            feedback round raises it further. After two rounds of 20 real rollouts the policy succeeds
+            15.8&ndash;17.1 points more often than &pi;<sub>0</sub> in simulation and 25.0&ndash;28.1 points more
+            often on the real robot. DSRL and a VLAW reproduction (VLAW&dagger;) receive the same 40 real
+            rollouts per task; Online 2 is ahead of both on every task.
           </p>
         </div>
         <div class="table-container">
           <table class="table is-bordered is-striped is-narrow is-hoverable is-fullwidth has-text-centered results-table">
             <thead>
               <tr>
-                <th class="has-text-left">Setting</th>
-                <th>Task</th>
-                <th>Success-rate gain over &pi;<sub>0</sub></th>
+                <th class="has-text-left">Task</th>
+                <th>&pi;<sub>0</sub></th>
+                <th>DSRL</th>
+                <th>VLAW&dagger;</th>
+                <th>Imagined</th>
+                <th>Online 1</th>
+                <th>Online 2</th>
               </tr>
             </thead>
             <tbody>
-              <tr><td rowspan="3" class="has-text-left"><b>Simulation</b></td><td>TurnOnSinkFaucet</td><td><b>+16.0</b></td></tr>
-              <tr><td>OpenCabinet</td><td><b>+15.4</b></td></tr>
-              <tr><td>PickPlaceCounterToStove</td><td><b>+17.0</b></td></tr>
-              <tr class="mean-row"><td class="has-text-left"><b>Real robot</b></td><td>Open Jar / Stack Box / Fold Cloth</td><td><b>+25 to +28</b></td></tr>
+              <tr><td class="has-text-left">SinkFaucet</td><td>27.6</td><td>32.4</td><td>39.4</td><td>31.8</td><td>34.7</td><td><b>43.5</b></td></tr>
+              <tr><td class="has-text-left">OpenCabinet</td><td>21.8</td><td>34.1</td><td>28.8</td><td>23.5</td><td>27.1</td><td><b>37.6</b></td></tr>
+              <tr><td class="has-text-left">PickPlace</td><td>25.3</td><td>25.9</td><td>30.6</td><td>28.8</td><td>32.4</td><td><b>42.4</b></td></tr>
+              <tr><td class="has-text-left">OpenJar</td><td>31.3</td><td>50.0</td><td>53.1</td><td>40.6</td><td>53.1</td><td><b>59.4</b></td></tr>
+              <tr><td class="has-text-left">StackBox</td><td>6.3</td><td>18.8</td><td>21.9</td><td>12.5</td><td>25.0</td><td><b>34.4</b></td></tr>
+              <tr><td class="has-text-left">FoldCloth</td><td>9.4</td><td>18.8</td><td>31.3</td><td>18.8</td><td>28.1</td><td><b>34.4</b></td></tr>
             </tbody>
           </table>
         </div>
-        <p class="has-text-grey is-size-7 has-text-centered">Success-rate gains in percentage points over the SFT-pretrained &pi;<sub>0</sub> policy.</p>
+        <p class="has-text-grey is-size-7 has-text-centered">
+          Success rate (%) over 170 simulation episodes or 32 real-robot trials per cell. Our three stages receive 0, 20, and 40 new real rollouts; the baselines receive 40.
+        </p>
+        <div class="content has-text-justified" style="margin-top:1rem;">
+          <p>
+            Controlled studies in the paper separate the two uses of the score, show that the gate acts through
+            which samples it down-weights, and show that the requested data corrects the model where it was
+            flagged without forgetting elsewhere.
+          </p>
+        </div>
       </div>
     </div>
   </div>
@@ -223,24 +246,24 @@
   <div class="container is-max-desktop">
     <div class="columns is-centered has-text-centered">
       <div class="column is-full-width">
-        <h2 class="title is-2">Q-Value Visualization</h2>
+        <h2 class="title is-2">Action-Conditioned Value</h2>
         <div class="content has-text-centered">
           <p>
             Select a task to compare a <span class="tag-suc has-text-weight-bold">success</span> and a
-            <span class="tag-fail has-text-weight-bold">failure</span> rollout. Each clip shows the three
-            camera views alongside the world model's predicted <b>Q-value / cost</b> over the rollout: it
-            rises toward task completion on successful executions and stays low when the policy fails.
+            <span class="tag-fail has-text-weight-bold">failure</span> rollout. Each clip shows the camera
+            views together with the predicted value over the rollout: it rises toward completion on
+            successes and drops as soon as the policy fails.
           </p>
         </div>
 
         <div id="qvis-switcher">
           <div class="buttons is-centered video-tabs">
-            <button class="button is-rounded is-active" data-key="turn">TurnOnSinkFaucet</button>
+            <button class="button is-rounded is-active" data-key="turn">SinkFaucet</button>
             <button class="button is-rounded" data-key="open">OpenCabinet</button>
-            <button class="button is-rounded" data-key="pick">PickPlaceCounterToStove</button>
-            <button class="button is-rounded" data-key="openjar">Open Jar</button>
-            <button class="button is-rounded" data-key="stack">Stack Box</button>
-            <button class="button is-rounded" data-key="merge">Fold Cloth</button>
+            <button class="button is-rounded" data-key="pick">PickPlace</button>
+            <button class="button is-rounded" data-key="openjar">OpenJar</button>
+            <button class="button is-rounded" data-key="stack">StackBox</button>
+            <button class="button is-rounded" data-key="merge">FoldCloth</button>
           </div>
           <div class="columns" style="margin-top:0.5rem;">
             <div class="column">
@@ -267,13 +290,13 @@
       <div class="column is-full-width">
         <h2 class="title is-2">Real-Robot Rollouts</h2>
         <div class="content has-text-centered">
-          <p>Autonomous real-robot rollouts of a REVAMP-improved policy on the dual-arm platform.</p>
+          <p>Autonomous rollouts of the policy after two feedback rounds on the three physical tasks.</p>
         </div>
         <div id="real-switcher">
           <div class="buttons is-centered video-tabs">
-            <button class="button is-rounded is-active" data-video="openjar_real">Open Jar</button>
-            <button class="button is-rounded" data-video="stackbox_real">Stack Box</button>
-            <button class="button is-rounded" data-video="foldcloth_real">Fold Cloth</button>
+            <button class="button is-rounded is-active" data-video="openjar_real">OpenJar</button>
+            <button class="button is-rounded" data-video="stackbox_real">StackBox</button>
+            <button class="button is-rounded" data-video="foldcloth_real">FoldCloth</button>
           </div>
           <video id="real-video" class="single-video" autoplay loop muted playsinline controls
                  src="./static/videos/openjar_real.mp4"></video>
@@ -293,7 +316,7 @@
 </footer>
 
 <script>
-  // Q-value visualization: 6-task switcher (success | failure)
+  // Action-conditioned value: 6-task switcher (success | failure)
   (function () {
     var wrap = document.getElementById('qvis-switcher');
     if (!wrap) return;
@@ -306,7 +329,8 @@
         var k = btn.getAttribute('data-key');
         suc.src = './static/videos/' + k + '_suc.mp4';
         fail.src = './static/videos/' + k + '_fail.mp4';
-        suc.play(); fail.play();
+        suc.load(); fail.load();
+        Promise.allSettled([suc.play(), fail.play()]);
       });
     });
   })();
@@ -321,7 +345,8 @@
         wrap.querySelectorAll('button').forEach(function (b) { b.classList.remove('is-active'); });
         btn.classList.add('is-active');
         vid.src = './static/videos/' + btn.getAttribute('data-video') + '.mp4';
-        vid.play();
+        vid.load();
+        Promise.resolve(vid.play()).catch(function () {});
       });
     });
   })();
